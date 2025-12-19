@@ -41,9 +41,11 @@ Thank you for your interest in contributing to Cache Cleaner! This document prov
    cd CacheCleaner
    ```
 
+   **Note**: Replace `YOUR-USERNAME` with your GitHub username. The main repository is at [github.com/syliu04/CacheCleaner](https://github.com/syliu04/CacheCleaner).
+
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL-OWNER/CacheCleaner.git
+   git remote add upstream https://github.com/syliu04/CacheCleaner.git
    ```
 
 4. **Verify remotes**:

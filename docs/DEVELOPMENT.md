@@ -56,7 +56,7 @@ CacheCleaner/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/CacheCleaner.git
+   git clone https://github.com/syliu04/CacheCleaner.git
    cd CacheCleaner
    ```
 

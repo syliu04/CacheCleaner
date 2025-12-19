@@ -25,8 +25,8 @@ A lightweight macOS application that helps you clean system caches, user caches,
 
 ### Download the App
 
-1. **Download the DMG file** from the [Releases page](https://github.com/YOUR-USERNAME/CacheCleaner/releases)
-   - Look for the latest release
+1. **Download the DMG file** from the [Releases page](https://github.com/syliu04/CacheCleaner/releases)
+   - Latest release: [v1.0.0](https://github.com/syliu04/CacheCleaner/releases/tag/v1.0.0)
    - Download the `CacheCleaner-v1.0.dmg` file
 
 2. **Install the app**:
@@ -79,7 +79,7 @@ Complete developer documentation is available in the [`docs/`](docs/) directory:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-USERNAME/CacheCleaner.git
+git clone https://github.com/syliu04/CacheCleaner.git
 cd CacheCleaner
 
 # Open in Xcode
