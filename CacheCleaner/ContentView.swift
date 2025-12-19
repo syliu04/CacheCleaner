@@ -17,6 +17,8 @@ struct ContentView: View {
     @State private var hasCalculated = false
     @State private var hasCleaned = false
     @State private var selectedCaches = Set<CacheType>()
+    @State private var showSuccess = false
+    @State private var pulseAnimation = false
     
     enum CacheType: String, CaseIterable, Hashable {
         case userCache = "User Cache"
@@ -73,113 +75,238 @@ struct ContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 20) {
-            // App title
-            Text("🧹 Cache Cleaner")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            Text("Select caches to clean:")
-                .font(.headline)
-            
-            // Cache selection checkboxes
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(CacheType.allCases, id: \.self) { cacheType in
-                    HStack {
-                        Image(systemName: selectedCaches.contains(cacheType) ? "checkmark.square.fill" : "square")
-                            .foregroundColor(.blue)
-                            .onTapGesture {
-                                toggleSelection(for: cacheType)
-                            }
-                        Text(cacheType.rawValue)
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        toggleSelection(for: cacheType)
+        ZStack {
+            // Animated gradient background
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    hasCleaned ? Color.green.opacity(0.1) : Color.blue.opacity(0.1),
+                    hasCleaned ? Color.green.opacity(0.05) : Color.cyan.opacity(0.05)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 1.0), value: hasCleaned)
+
+            ScrollView {
+                VStack(spacing: 25) {
+                // App title with icon
+                HStack(spacing: 15) {
+                    Image(systemName: hasCleaned ? "checkmark.circle.fill" : "sparkles")
+                        .font(.system(size: 40))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: hasCleaned ? [.green, .mint] : [.blue, .cyan],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .rotationEffect(.degrees(pulseAnimation ? 360 : 0))
+                        .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: false), value: pulseAnimation)
+
+                    Text("Cache Cleaner")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.blue, .cyan],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                }
+                .padding(.top, 10)
+
+                // Cache selection card
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Select Caches to Clean")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    VStack(spacing: 12) {
+                        ForEach(CacheType.allCases, id: \.self) { cacheType in
+                            CacheSelectionRow(
+                                cacheType: cacheType,
+                                isSelected: selectedCaches.contains(cacheType),
+                                onToggle: { toggleSelection(for: cacheType) }
+                            )
+                        }
                     }
                 }
-            }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(10)
-            
-            // Status message
-            Text(statusMessage)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            // Cache size breakdown (only show after calculation, before cleaning)
-            if hasCalculated && !hasCleaned && !cacheBreakdown.isEmpty {
-                VStack(spacing: 8) {
-                    Text("Total cache size: \(totalCacheSize)")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                    
-                    // Individual cache sizes breakdown
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(cacheBreakdown.keys).sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { cacheType in
-                            if selectedCaches.contains(cacheType) {
-                                HStack {
-                                    Text("• \(cacheType.rawValue):")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text(cacheBreakdown[cacheType] ?? "0 MB")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fontWeight(.medium)
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.8))
+                        .shadow(color: .blue.opacity(0.1), radius: 10, x: 0, y: 5)
+                )
+
+                // Simple progress indicator
+                if isProcessing {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(1.5)
+                        .tint(hasCleaned ? .green : .blue)
+                }
+
+                // Status message with animation
+                Text(statusMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .transition(.opacity)
+                    .id(statusMessage)
+
+                // Cache size breakdown with animation
+                if hasCalculated && !hasCleaned && !cacheBreakdown.isEmpty {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "chart.pie.fill")
+                                .foregroundColor(.blue)
+                            Text("Total: \(totalCacheSize)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.blue, .cyan],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(cacheBreakdown.keys).sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { cacheType in
+                                if selectedCaches.contains(cacheType) {
+                                    HStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.6))
+                                            .frame(width: 8, height: 8)
+                                        Text(cacheType.rawValue)
+                                            .font(.callout)
+                                        Spacer()
+                                        Text(cacheBreakdown[cacheType] ?? "0 MB")
+                                            .font(.callout)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.blue)
+                                    }
                                 }
                             }
                         }
+                        .padding(12)
+                        .background(Color.blue.opacity(0.05))
+                        .cornerRadius(10)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.8))
+                            .shadow(color: .blue.opacity(0.15), radius: 8, x: 0, y: 4)
+                    )
+                    .transition(.scale.combined(with: .opacity))
                 }
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.05))
-                .cornerRadius(8)
-            }
-            
-            // Space saved (ONLY show after cleaning is complete)
-            if hasCleaned {
-                Text("Space saved: \(spaceSaved)")
-                    .font(.headline)
-                    .foregroundColor(.green)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 12)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(8)
-            }
-            
-            // Action Buttons
-            HStack(spacing: 20) {
-                Button("Calculate Size") {
-                    calculateCacheSize()
+
+                // Success card with animation
+                if hasCleaned {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.green)
+                            .scaleEffect(showSuccess ? 1.0 : 0.5)
+                            .opacity(showSuccess ? 1.0 : 0.0)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.6), value: showSuccess)
+
+                        Text("Space Freed!")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+
+                        Text(spaceSaved)
+                            .font(.system(size: 32, weight: .heavy, design: .rounded))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.green, .mint],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.9))
+                            .shadow(color: .green.opacity(0.2), radius: 15, x: 0, y: 5)
+                    )
+                    .transition(.scale.combined(with: .opacity))
                 }
-                .buttonStyle(.bordered)
-                .disabled(selectedCaches.isEmpty || isProcessing)
-                
-                Button("Clean Selected") {
-                    cleanCaches()
+
+                Spacer()
+
+                // Action Buttons with gradient
+                HStack(spacing: 15) {
+                    Button(action: { calculateCacheSize() }) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                            Text("Calculate Size")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [.blue, .cyan],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: .blue.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .disabled(selectedCaches.isEmpty || isProcessing)
+                    .opacity(selectedCaches.isEmpty || isProcessing ? 0.5 : 1.0)
+                    .buttonStyle(.plain)
+
+                    Button(action: { cleanCaches() }) {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                            Text("Clean Now")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 25)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [.green, .mint],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: .green.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .disabled(selectedCaches.isEmpty || isProcessing)
+                    .opacity(selectedCaches.isEmpty || isProcessing ? 0.5 : 1.0)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(selectedCaches.isEmpty || isProcessing)
+
+                // Warning
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text("Close all applications before cleaning")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                .padding(.bottom, 10)
+                }
+                .padding(30)
             }
-            
-            if isProcessing {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .scaleEffect(0.8)
-            }
-            
-            // Warning
-            Text("⚠️ Close all applications before cleaning")
-                .font(.caption)
-                .foregroundColor(.orange)
-                .padding(.top)
         }
-        .padding(30)
-        .frame(width: 500, height: 500)
+        .frame(minWidth: 600, idealWidth: 600, maxWidth: 800, minHeight: 600, idealHeight: 700, maxHeight: .infinity)
+        .onAppear {
+            pulseAnimation = true
+        }
     }
     
     // Helper to toggle checkboxes
@@ -202,26 +329,29 @@ struct ContentView: View {
         isProcessing = true
         hasCalculated = false
         hasCleaned = false
+        showSuccess = false
         statusMessage = "Calculating cache sizes..."
         cacheBreakdown.removeAll()
-        
+
         DispatchQueue.global(qos: .background).async {
             var totalSize: Int64 = 0
             var breakdown: [CacheType: String] = [:]
-            
+
             for cacheType in selectedCaches {
                 let size = getDirectorySize(path: cacheType.path)
                 totalSize += size
                 breakdown[cacheType] = formatBytes(size)
                 print("DEBUG: \(cacheType.rawValue) size: \(formatBytes(size)) at path: \(cacheType.path)")
             }
-            
+
             DispatchQueue.main.async {
-                totalCacheSize = formatBytes(totalSize)
-                cacheBreakdown = breakdown
-                hasCalculated = true
-                statusMessage = "Cache sizes calculated. Ready to clean."
-                isProcessing = false
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    totalCacheSize = formatBytes(totalSize)
+                    cacheBreakdown = breakdown
+                    hasCalculated = true
+                    statusMessage = "Cache sizes calculated. Ready to clean."
+                    isProcessing = false
+                }
             }
         }
     }
@@ -229,9 +359,11 @@ struct ContentView: View {
     // Helper to clean selected caches
     private func cleanCaches() {
         isProcessing = true
+        hasCleaned = false
+        showSuccess = false
         statusMessage = "Cleaning caches..."
         var totalCleaned: Int64 = 0
-        
+
         DispatchQueue.global(qos: .background).async {
             for cacheType in selectedCaches {
                 if cacheType == .systemCache {
@@ -241,20 +373,30 @@ struct ContentView: View {
                     }
                     continue
                 }
-                
+
                 let sizeBeforeCleaning = getDirectorySize(path: cacheType.path)
                 clearDirectory(at: cacheType.path)
                 let sizeAfterCleaning = getDirectorySize(path: cacheType.path)
                 let cleaned = sizeBeforeCleaning - sizeAfterCleaning
                 totalCleaned += cleaned
-                
+
                 print("DEBUG: Cleaned \(formatBytes(cleaned)) from \(cacheType.rawValue)")
             }
-            
+
             DispatchQueue.main.async {
-                spaceSaved = formatBytes(totalCleaned)
-                statusMessage = "Successfully cleaned! Freed up \(formatBytes(totalCleaned))"
-                isProcessing = false
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    spaceSaved = formatBytes(totalCleaned)
+                    statusMessage = "Successfully cleaned! Freed up \(formatBytes(totalCleaned))"
+                    hasCleaned = true
+                    isProcessing = false
+                }
+
+                // Trigger success animation after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation {
+                        showSuccess = true
+                    }
+                }
             }
         }
     }
@@ -379,5 +521,64 @@ struct ContentView: View {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .decimal
         return formatter.string(fromByteCount: bytes)
+    }
+}
+
+// MARK: - Custom Views
+
+struct CacheSelectionRow: View {
+    let cacheType: ContentView.CacheType
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: 2)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+                    )
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.blue)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+
+            Text(cacheType.rawValue)
+                .font(.body)
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Image(systemName: icon(for: cacheType))
+                .foregroundColor(isSelected ? .blue : .gray.opacity(0.6))
+                .font(.system(size: 18))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.blue.opacity(0.05) : Color.gray.opacity(0.05))
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onToggle()
+        }
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+
+    private func icon(for cacheType: ContentView.CacheType) -> String {
+        switch cacheType {
+        case .userCache: return "person.circle.fill"
+        case .systemCache: return "externaldrive.fill"
+        case .logs: return "doc.text.fill"
+        case .trash: return "trash.fill"
+        }
     }
 }
